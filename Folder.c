@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "../Header/Folder.h"
 #include <sys/types.h> 
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
@@ -115,11 +116,13 @@ Status showFolderTree(char* path, int depth) {
 //创建一个树节点，并分配内存
 Folder* createTreeNode(char* name, char* path) {
 	Folder* node = (Folder*)malloc(sizeof(Folder));
+	node->path = (char*)malloc(sizeof(char) * strlen(path));
 	strcpy(node->name, name);
 	node->child = NULL;
 	node->parent = NULL;
 	node->sibling = NULL;
-	node->path = path;
+	node->visited = 0;
+	strcpy(node->path, path);
 	return node;
 }
 
@@ -228,13 +231,13 @@ Folder* dequeue(Queue* q) {
 }
 
 //广度优先搜索函数，参数为树的根节点
-Folder* findFolder( char* path) {
-	//if (root == NULL) { //空树直接返回
-	//	return;
-	//}
-	//if (strcmp(root->path, path) == 0) { //如果根文件夹就是目标文件夹，打印其路径并返回
-	//	return root;
-	//}
+Folder* findFolder(char* path) {
+	if (root == NULL) { //空树直接返回
+		return;
+	}
+	if (strcmp(root->path, path) == 0) { //如果根文件夹就是目标文件夹，打印其路径并返回
+		return root;
+	}
 	Queue q; //创建一个队列
 	initQueue(&q); //初始化队列，第二个参数为自定义比较函数，这里不需要
 	//int visited[100] = { 0 }; //创建一个数组记录已访问过的节点，初始为全0
@@ -251,13 +254,12 @@ Folder* findFolder( char* path) {
 				c->visited = 1; //将子节点标记为已访问
 			}
 			if (strcmp(c->path, path) == 0) {
-				free(&q);
 				return c;
 			}
 			c = c->sibling; //获取下一个兄弟节点
 		}
 	}
-	free(&q); //销毁队列
+	//free(&q); //销毁队列
 	return NULL;
 }
 
@@ -266,7 +268,6 @@ Folder* createFolder (char* name, char* path) {
 	if (root == NULL || path == NULL || name == NULL) {
 		return; 
 	}
-
 	else {
 		char p[MAX_PATH];
 		int len = strlen(path);
@@ -386,60 +387,91 @@ Folder* moveDirectory(Folder* currentFolder, char* path) {
 	}
 }
 
+Status IsEmptyFolder(Folder* folder) {
+	if (folder->child == NULL) {
+		return SUCCESS;
+	}
+	else {
+		return ERROR;
+	}
+}
+
 Status deleteFolder(Folder* folder) {
 	printf("It'll delete all file in this folder!\n");
 
 
 	//先删除文件夹下的所有文件
-	Folder* temp = malloc(sizeof(Folder));
-	
-	//char temp[100]; //存储文件路径
-	struct _finddata_t fileinfo; //存储文件信息
-	long handle; //用于查找文件的句柄
-	strcpy(temp->path, folder->path); //复制文件夹路径
-	strcat(temp->path, "\\*"); //添加通配符
-	handle = _findfirst(temp->path, &fileinfo); //查找第一个匹配的文件
-	if (handle == -1) { //如果没有找到，返回
-		return ERROR;
-	}
-	do {
-		if (strcmp(fileinfo.name, ".") == 0 || strcmp(fileinfo.name, "..") == 0) {
-			continue; //跳过当前目录和上级目录
-		}
-		strcpy(temp->path, folder->path); //复制文件夹路径
-		strcat(temp->path, "\\"); //添加分隔符
-		strcat(temp->path, fileinfo.name); //添加文件名
-		if (fileinfo.attrib & _A_SUBDIR) { //如果是子目录
-			deleteFolder(temp); //递归删除子目录下的所有文件
-			_rmdir(temp->path); //删除空子目录
-		}
-		else { //如果是普通文件
-			remove(temp->path); //删除文件
-		}
-	} while (_findnext(handle, &fileinfo) == 0); //查找下一个匹配的文件
-	_findclose(handle); //关闭句柄
+	//Folder* temp = malloc(sizeof(Folder));
+	//Folder* temp = createTreeNode("temp", root->path);
+	//if (temp == ERROR) {
+	//	return ERROR;
+	//}
 
-	free(findFolder(root, folder->path));
-	return SUCCESS;
+	if (IsEmptyFolder(folder) == SUCCESS) {
+		_rmdir(folder->path);
+		return SUCCESS;
+	}
+	//else {
+	//	while (1) {
+	//		if (note->path == NULL) {
+	//			break;
+	//		}
+	//		rmove(note->path);
+	//	}
+	//	_rmdir(folder->path);
+	//}
+	//char temp[100]; //存储文件路径
+	//struct _finddata_t fileinfo; //存储文件信息
+	//long handle; //用于查找文件的句柄
+	////strcpy(temp->path, folder->path); //复制文件夹路径
+	//strcat(temp->path, "\\test"); //添加通配符
+	//handle = _findfirst(folder->path, &fileinfo); //查找第一个匹配的文件
+	//if (handle == -1L) { //如果没有找到，返回
+	//	return ERROR;
+	//}
+	//do {
+	//	if (strcmp(fileinfo.name, ".") == 0 || strcmp(fileinfo.name, "..") == 0) {
+	//	/*	if (strcmp(temp->path, folder->path) == 0 ) {
+	//			return SUCCESS;
+	//		}*/
+	//		continue; //跳过当前目录和上级目录
+	//	}
+	//	strcpy(temp->path, folder->path); //复制文件夹路径
+	//	strcat(temp->path, "\\"); //添加分隔符
+	//	strcat(temp->path, fileinfo.name); //添加文件名
+	//	if (fileinfo.attrib & _A_SUBDIR) { //如果是子目录
+	//		deleteFolder(temp); //递归删除子目录下的所有文件
+	//		_rmdir(temp->path); //删除空子目录
+	//	}
+	//	else { //如果是普通文件
+	//		remove(temp->path); //删除文件
+	//	}
+	//} while (_findnext(handle, &fileinfo) == 0); //查找下一个匹配的文件
+	//_findclose(handle); //关闭句柄
+
+	//free(findFolder(folder->path));
+	//return SUCCESS;
 }
 
 Status renameFolder(Folder* folder, char* name) {
 
-	int result = rename(folder->path, name); //调用rename函数
-	if (result == 0) { //判断是否成功
-
-		int len = strlen(folder->path); //获取数组长度
-		for (int i = len - 1; i >= 0; i--) { //从后往前遍历
-			if (folder->path[i] == '\\') { //如果遇到\\字符
-				break; //退出循环
-			}
-			folder->path[i] = '\0'; //否则将该字符赋值为'\0'
+	char temp[MAX_PATH];
+	strcpy(temp, folder->path);
+	int len = strlen(folder->path); //获取数组长度
+	for (int i = len - 1; i >= 0; i--) { //从后往前遍历
+		if (folder->path[i] == '\\') { //如果遇到\\字符
+			break; //退出循环
 		}
-		strcat(folder->path, name);
-		printf("%s\n", folder->path); //打印数组
-
+		folder->path[i] = '\0'; //否则将该字符赋值为'\0'
+	}
+	int result = rename(temp, strcat(folder->path, name)); //调用rename函数
+	if (result == 0) { //判断是否成功
 		printf("重命名成功\n");
 		return SUCCESS;
+	
+		//strcat(folder->path, name);
+		//printf("%s\n", folder->path); //打印数组
+
 	}
 	else {
 		printf("重命名失败\n");
@@ -456,8 +488,8 @@ int main() {
 	showFolders(curdir, 0);
 	root = readFolders(strcat(curdir, "\\md"));
 
-	//createFolder("test", "J:\\Programing\\C\\QG_Training\\Note_sys\\Note\\md\\test");//请不要在最后加'\\'
 
-	deleteFolder(findFolder("J:\\Programing\\C\\QG_Training\\Note_sys\\Note\\md\\test"));
+	renameFolder(createFolder("test", "J:\\Programing\\C\\QG_Training\\Note_sys\\Note\\md"), "a");
+	//deleteFolder(findFolder("J:\\Programing\\C\\QG_Training\\Note_sys\\Note\\md\\test"));
 	return 0;
 }
