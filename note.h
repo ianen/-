@@ -23,13 +23,13 @@ Note* createNote(char* creater, char* noteTitle, char* currentPath);
 Status addNoteToFolder(Folder* folder, Note* newNote);
 
 //在当前文件夹创建新笔记文件，对应mkdir <笔记文件名>
-Status addNewNoteToFolder(Folder* currentfolder, char* creater, char* noteTitle);
+Status addNewNoteToFolder(Folder* currentFolder, char* creater, char* noteTitle);
 
 // 对指定笔记文件进行删除
 Status deleteNote(Note* note);
 
 // 从当前文件夹中删除笔记,对应 rm <笔记文件名>
-Status deleteNoteFromFolder(Folder* folder, char* noteTitle);
+Status deleteNoteFromFolder(Folder* currentFolder, char* noteTitle);
 
 //按笔记名称搜索笔记文件
 Note* searchNoteByName(Folder* root, char* noteName);
